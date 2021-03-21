@@ -1,4 +1,4 @@
-# CP55 – A Modern Beer collection web app.
+# Pale Ale – A Modern Beer Collection Web Application
 
 [![CircleCI](https://circleci.com/bb/ctiu6442/m14b-group-1-cp55.svg?style=svg&circle-token=78ca3c635156fa92ee8efb0cac835ae2031761e0)](https://circleci.com/bb/ctiu6442/m14b-group-1-cp55)
 
