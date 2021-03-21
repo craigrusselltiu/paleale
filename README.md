@@ -10,7 +10,6 @@ Some existing examples: that all miss the mark in one way or another....
 
 * https://www.cellarhq.com/
 * https://cellar.beer/
-* http://www.beercellarlist.com/index.php?page=home
 * http://www.beerxchange.com/
 
 ## What I Learned
