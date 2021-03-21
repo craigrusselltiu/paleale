@@ -1,0 +1,72 @@
+# Use this file to configure the Overcommit hooks you wish to use. This will
+# extend the default configuration defined in:
+# https://github.com/sds/overcommit/blob/master/config/default.yml
+#
+# For a complete list of hooks, see:
+# https://github.com/sds/overcommit/tree/master/lib/overcommit/hook
+#
+# For a complete list of options that you can use to customize hooks, see:
+# https://github.com/sds/overcommit#configuration
+#
+
+# Where to store hook plugins specific to a repository. These are loaded in
+# addition to the default hooks Overcommit comes with. The location is relative
+# to the root of the repository.
+plugin_directory: '.git-hooks'
+
+# Whether to check if a hook plugin has changed since Overcommit last ran it.
+# This is a defense mechanism when working with repositories which can contain
+# untrusted code (e.g. when you fetch a pull request from a third party).
+# See https://github.com/brigade/overcommit#security for more information.
+verify_signatures: true
+
+CommitMsg:
+  EmptyMessage:
+    enabled: true
+
+  SingleLineSubject:
+    enabled: true
+
+  TextWidth:
+    enabled: true
+
+  TrailingPeriod:
+    enabled: true
+
+PreCommit:
+  BrokenSymlinks:
+    enabled: true
+
+  CaseConflicts2:
+    enabled: true
+
+  MergeConflicts:
+    enabled: true
+
+  TsLint:
+    enabled: true
+    include:
+      - 'paleale/**/*.ts'
+      - 'paleale/**/*.tsx'
+
+  GolangciLint:
+    enabled: true
+    quiet: false
+    parallelize: false
+    description: 'Analyzing with GolangCI-Lint'
+    required_executable: 'golangci-lint'
+    command: ['golangci-lint', 'run']
+
+  TrailingWhitespace:
+    enabled: true
+
+  YamlSyntax:
+    enabled: true
+
+#
+#PostCheckout:
+#  ALL: # Special hook name that customizes all hooks of this type
+#    quiet: true # Change all post-checkout hooks to only display output on failure
+#
+#  IndexTags:
+#    enabled: true # Generate a tags file with `ctags` each time HEAD changes

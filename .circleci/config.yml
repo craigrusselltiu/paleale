@@ -1,0 +1,232 @@
+version: 2.1
+
+orbs:
+  aws-cli: circleci/aws-cli@0.1.16
+  aws-ecr: circleci/aws-ecr@6.4.0
+
+references:
+  burbon_working_directory: &burbon_working_directory
+    /home/circleci/burbon
+  kloster_working_directory: &kloster_working_directory
+    /home/circleci/burbon/kloster
+  paleale_working_directory: &paleale_working_directory
+    /home/circleci/burbon/paleale
+
+  checkout_burbon: &checkout_burbon
+    checkout:
+      path: *burbon_working_directory
+
+  workspace_root: &workspace_root
+    /tmp/workspace
+
+  attach_workspace: &attach_workspace
+    attach_workspace:
+      at: *workspace_root
+
+  repo_cache_key: &repo_cache_key
+    burbon-v8-{{ .Branch }}-{{ .Revision }}
+
+  restore_repo: &restore_repo
+    restore_cache:
+      keys:
+        - *repo_cache_key
+
+  kloster_cache_key: &kloster_cache_key
+    go-mod-v6-{{ .Branch }}-{{ checksum "go.sum" }}
+  kloster_backup_cache_key: &kloster_backup_cache_key
+    go-mod-v6
+
+  restore_kloster_cache: &restore_kloster_cache
+    restore_cache:
+        keys:
+          - *kloster_cache_key
+          - *kloster_backup_cache_key
+
+  paleale_cache_key: &paleale_cache_key
+    node-v6-{{ .Branch }}-{{ checksum "package.json" }}
+  paleale_backup_cache_key: &paleale_backup_cache_key
+    node-v6
+
+  restore_paleale_cache: &restore_paleale_cache
+    restore_cache:
+      keys:
+        - *paleale_cache_key
+        - *paleale_backup_cache_key
+
+jobs:
+  checkout_code:
+    docker:
+      - image: circleci/python
+    working_directory: *burbon_working_directory
+    steps:
+      - *restore_repo
+      - *checkout_burbon
+      - save_cache:
+          key: burbon-v8-{{ .Branch }}-{{ .Revision }}
+          paths:
+            - *burbon_working_directory
+
+  stylecheck:
+    docker:
+      - image: burbon/stylecheck:0.1
+    environment:
+      GIT_AUTHOR_NAME: Kloster CI
+      GIT_AUTHOR_EMAIL: ci@kloster.co
+    working_directory: *burbon_working_directory
+    steps:
+      - *restore_repo
+      - run: |
+          overcommit
+          overcommit --sign pre-commit
+          overcommit --run
+
+  test_kloster:
+    docker:
+      - image: circleci/golang:1.13.1
+    working_directory: *kloster_working_directory
+    steps:
+      - *restore_repo
+      - *restore_kloster_cache
+      - run: go mod download
+      - save_cache:
+          key: *kloster_cache_key
+          paths:
+            - /go/pkg/mod
+      - run: go test ./...
+
+  build_kloster:
+    docker:
+      - image: circleci/golang:1.13.1
+    working_directory: *kloster_working_directory
+    steps:
+      - *restore_repo
+      - *restore_kloster_cache
+      - run: go mod download
+      - save_cache:
+          key: *kloster_cache_key
+          paths:
+            - /go/pkg/mod
+      - run: go build -o target/kloster
+      - run:
+          name: Move compiled file to workspace
+          command: |
+            set -exu
+            mkdir -p /tmp/workspace/compiled-kloster
+            mv target/kloster /tmp/workspace/compiled-kloster
+      - persist_to_workspace:
+          root: *workspace_root
+          paths:
+            - compiled-kloster/kloster
+
+  build_paleale:
+    docker:
+      - image: circleci/node:10.9.0
+    working_directory: *paleale_working_directory
+    steps:
+      - *restore_repo
+      - *restore_paleale_cache
+      - run: npm install
+      - save_cache:
+          key: *paleale_cache_key
+          paths:
+            - /home/circleci/burbon/paleale/node_modules
+      - run: CI=false npm run build
+      - run:
+          name: Move compiled file to workspace
+          command: |
+            set -exu
+            mkdir -p /tmp/workspace/compiled-paleale/paleale
+            mv build/* /tmp/workspace/compiled-paleale/paleale
+      - persist_to_workspace:
+          root: *workspace_root
+          paths:
+            - compiled-paleale/paleale
+
+  build_and_push_image:
+    docker:
+      - image: circleci/python
+    working_directory: *burbon_working_directory
+    steps:
+      - *restore_repo
+      - *attach_workspace
+      - run:
+          name: Move compiled file to build context
+          command: |
+            set -exu
+            mv /tmp/workspace/compiled-kloster/kloster ci/production
+            mv /tmp/workspace/compiled-paleale/paleale ci/production
+      - run:
+          name: Install envsubst
+          command: |
+            sudo apt-get install -y --no-install-recommends gettext-base
+      - run:
+          name: Generate kloster.toml
+          command: envsubst <ci/production/kloster.toml.template >ci/production/kloster.toml
+      - aws-ecr/build-and-push-image:
+          path: ci/production
+          dockerfile: ci/production/Dockerfile
+          repo: kloster
+          setup-remote-docker: true
+
+  deploy:
+    executor: aws-cli/default
+    steps:
+      - aws-cli/setup:
+          aws-region: AWS_REGION
+      - run:
+          name: Stop all tasks
+          command: |
+            index=0
+            taskArn=$(aws ecs list-tasks --cluster burbon --query "taskArns[${index}]" --output text)
+
+            until [ "$taskArn" = "None" ]
+            do
+              aws ecs stop-task --cluster burbon --task $taskArn > /dev/null 2>&1
+              index=$((index + 1))
+              taskArn=$(aws ecs list-tasks --cluster burbon --query "taskArns[${index}]" --output text)
+            done
+      - run:
+          name: Force new deployment
+          command: |
+            aws ecs update-service \
+            --force-new-deployment \
+            --cluster burbon \
+            --service kloster-service > /dev/null 2>&1
+
+workflows:
+  version: 2.1
+
+  build_test_deploy:
+    jobs:
+      - checkout_code
+      - stylecheck:
+          requires:
+            - checkout_code
+      - test_kloster:
+          requires:
+            - stylecheck
+      - build_kloster:
+          requires:
+            - test_kloster
+          filters:
+            branches:
+              only: release
+      - build_paleale:
+          requires:
+            - test_kloster
+          filters:
+            branches:
+              only: release
+      - build_and_push_image:
+          requires:
+            - build_kloster
+            - build_paleale
+          filters:
+            branches:
+              only: release
+      - deploy:
+          requires:
+            - build_and_push_image
+          filters:
+            branches:
+              only: release

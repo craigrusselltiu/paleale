@@ -1,0 +1,34 @@
+[http]
+address = ":8080"
+
+[cors]
+enabled = true
+allowed_origins = ["http://localhost:3000"]
+allowed_methods = ["HEAD", "GET", "POST", "PUT", "PATCH", "DELETE"]
+allowed_headers = ["*"]
+allowed_credentials = false
+
+[auth]
+signing_secret = "6Gn5myIwEPJJp7jnmj9hP28FoYRDKNHX"
+
+[aws]
+region = "us-east-2"
+access_key_id = "AKIA5EB3CCCULFWT6KC7"
+secret_access_key = "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"
+session_token = ""
+
+[model_store]
+dynamodb_table_name = "kloster_test"
+max_cache = 104857600
+
+[beer_service]
+bleve_index_path = "/tmp/kloster_test.bleve"
+
+[untappd]
+request_timeout = "60s"
+client_id = "189047F88B595679BD61884A76052537D13A380A"
+client_secret = "D559532F72437F5E0DC049FC2B0D9B98A8E2480B"
+oauth2_callback_url = "http://localhost:3000/auth/untappd"
+
+[controller]
+timeout = "60s"

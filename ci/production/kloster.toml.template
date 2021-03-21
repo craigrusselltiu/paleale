@@ -1,0 +1,31 @@
+[http]
+address = ":8080"
+base_path = ""
+
+[cors]
+enabled = false
+
+[auth]
+signing_secret = "${KLOSTER_PROD_AUTH_SIGNING_SECRET}"
+
+[aws]
+region = "${KLOSTER_PROD_AWS_REGION}"
+access_key_id = "${KLOSTER_PROD_AWS_ACCESS_KEY_ID}"
+secret_access_key = "${KLOSTER_PROD_AWS_SECRET_ACCESS_KEY}"
+session_token = ""
+
+[model_store]
+dynamodb_table_name = "${KLOSTER_PROD_MODEL_STORE_DYNAMODB_TABLE_NAME}"
+max_cache = 104857600
+
+[beer_service]
+bleve_index_path = "/var/lib/kloster/beer_service_index.bleve/"
+
+[untappd]
+request_timeout = "60s"
+client_id = "${KLOSTER_PROD_UNTAPPD_CLIENT_ID}"
+client_secret = "${KLOSTER_PROD_UNTAPPD_CLIENT_SECRET}"
+oauth2_callback_url = "${KLOSTER_PROD_UNTAPPD_OAUTH2_CALLBACK_URL}"
+
+[controller]
+timeout = "60s"
