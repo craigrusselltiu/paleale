@@ -13,6 +13,16 @@ Some existing examples: that all miss the mark in one way or another....
 * http://www.beercellarlist.com/index.php?page=home
 * http://www.beerxchange.com/
 
+## What I Learned
+- React
+- JavaScript
+- TypeScript
+- Web app development process
+- Agile methodologies
+- Acceptance testing
+- Usability testing
+- Among other things!
+
 ## Paleale - Frontend
 Our frontend app
 
